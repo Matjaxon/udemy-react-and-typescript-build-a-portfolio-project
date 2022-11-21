@@ -1,54 +1,29 @@
 import * as esbuild from 'esbuild-wasm';
-import axios from 'axios';
 
 export const unpkgPathPlugin = () => {
   return {
     name: 'unpkg-path-plugin',
     setup(build: esbuild.PluginBuild) {
-      build.onResolve({ filter: /.*/ }, async (args: any) => {
-        console.log('onResolve', args);
-        if (args.path === 'index.js') {
-          return { path: args.path, namespace: 'a' };
-        }
+      // Handle root entry file of 'index.js'
+      build.onResolve({ filter: /(^index\.js$)/ }, () => {
+        return { path: 'index.js', namespace: 'a' };
+      });
 
-        // Are we working on a file that has a relative path in it?
-        // ./utils
-        if (args.path.includes('./') || args.path.includes('../')) {
-          return {
-            namespace: 'a',
-            path: new URL(
-              args.path,
-              'https://unpkg.com' + args.resolveDir + '/'
-            ).href
-          };
-        }
-
+      // Handle relative files being pointed to with './' or '../'
+      // Example: './utils'
+      build.onResolve({ filter: /^\.+\// }, (args: any) => {
         return {
           namespace: 'a',
-          path: `https://unpkg.com/${args.path}`
+          path: new URL(args.path, 'https://unpkg.com' + args.resolveDir + '/')
+            .href
         };
       });
 
-      build.onLoad({ filter: /.*/ }, async (args: any) => {
-        console.log('onLoad', args);
-
-        if (args.path === 'index.js') {
-          return {
-            loader: 'jsx',
-            contents: `
-              const message = require('nested-test-pkg');
-              console.log(message);
-            `
-          };
-        }
-
-        const { data, request } = await axios.get(args.path);
-        console.log(data, request);
-
+      // Handle main file of a module
+      build.onResolve({ filter: /.*/ }, async (args: any) => {
         return {
-          loader: 'jsx',
-          contents: data,
-          resolveDir: new URL('./', request.responseURL).pathname // Use './' to get the path of the directory the file lives in rather than the filename.
+          namespace: 'a',
+          path: `https://unpkg.com/${args.path}`
         };
       });
     }
