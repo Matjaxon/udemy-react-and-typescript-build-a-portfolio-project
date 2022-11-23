@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import './preview.css';
 
 interface PreviewProps {
   code: string;
@@ -6,7 +7,9 @@ interface PreviewProps {
 
 const html = `
 <html>
-  <head></head>
+  <head>
+    <style>html { background-color: white; }</style>
+  </head>
   <body>
     <div id="root"></div>
     <script>
@@ -33,10 +36,17 @@ const Preview: React.FC<PreviewProps> = ({ code }) => {
     // we added for them to inject React code into.
     iframe.current.srcdoc = html;
 
-    iframe.current.contentWindow.postMessage(code, '*');
+    // This minor delay allows the browser to properly replace the html before trying to post a message.
+    setTimeout(() => {
+      iframe.current.contentWindow.postMessage(code, '*');
+    }, 50);
   }, [code]);
 
-  return <iframe srcDoc={html} ref={iframe} sandbox="allow-scripts" />;
+  return (
+    <div className="preview-wrapper">
+      <iframe srcDoc={html} ref={iframe} sandbox="allow-scripts" />
+    </div>
+  );
 };
 
 export default Preview;
