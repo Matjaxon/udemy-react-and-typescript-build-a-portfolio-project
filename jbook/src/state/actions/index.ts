@@ -13,15 +13,13 @@ export interface MoveCellAction {
 
 export interface DeleteCellAction {
   type: ActionType.DELETE_CELL;
-  payload: {
-    id: string;
-  };
+  payload: string; // The ID of the cell to be deleted.
 }
 
 export interface InsertCellBeforeAction {
   type: ActionType.INSERT_CELL_BEFORE;
   payload: {
-    id: string;
+    id: string | null; // null used to add after last cell.
     type: CellTypes;
   };
 }
