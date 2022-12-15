@@ -4,7 +4,7 @@ import { fetchPlugin } from './plugins/fetch-plugin';
 
 let service: esbuild.Service;
 
-interface BundleResult {
+export interface BundleResult {
   code: string;
   error?: string;
 }
