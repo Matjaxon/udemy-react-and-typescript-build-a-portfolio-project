@@ -5,6 +5,7 @@ import Resizable from './resizable';
 import { Cell } from '../state';
 import { useActions } from '../hooks';
 import { useTypedSelector } from '../hooks/use-typed-selector';
+import './code-cell.css';
 
 interface CodeCellProps {
   cell: Cell;
@@ -15,6 +16,12 @@ const CodeCell: React.FC<CodeCellProps> = ({ cell }) => {
   const bundle = useTypedSelector((state) => state.bundles[cell.id]);
 
   useEffect(() => {
+    // When the cell is initially loaded there is no bundle so we don't want to wait for the delay to kick off that
+    // bundling process.
+    if (!bundle) {
+      createBundle(cell.id, cell.content);
+    }
+
     const timer = setTimeout(async () => {
       createBundle(cell.id, cell.content);
     }, 750);
@@ -22,6 +29,7 @@ const CodeCell: React.FC<CodeCellProps> = ({ cell }) => {
     return () => {
       clearTimeout(timer);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cell.content, cell.id, createBundle]);
 
   return (
@@ -39,7 +47,17 @@ const CodeCell: React.FC<CodeCellProps> = ({ cell }) => {
             onChange={(value) => updateCell(cell.id, value)}
           />
         </Resizable>
-        {bundle && <Preview code={bundle.code} error={bundle.error} />}
+        <div className="progress-wrapper">
+          {!bundle || bundle.loading ? (
+            <div className="progress-cover">
+              <progress className="progress is-small is-primary" max="100">
+                Loading
+              </progress>
+            </div>
+          ) : (
+            <Preview code={bundle.code} error={bundle.error} />
+          )}
+        </div>
       </div>
     </Resizable>
   );
