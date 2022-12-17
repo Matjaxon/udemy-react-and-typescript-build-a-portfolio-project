@@ -14,23 +14,56 @@ interface CodeCellProps {
 const CodeCell: React.FC<CodeCellProps> = ({ cell }) => {
   const { updateCell, createBundle } = useActions();
   const bundle = useTypedSelector((state) => state.bundles[cell.id]);
+  const cummulativeCode = useTypedSelector((state) => {
+    const { data, order } = state.cells;
+    const orderedCells = order.map((id) => data[id]);
+    const cummulativeCode = [
+      `
+        const show = (value) => {
+          const root = document.querySelector('#root');
+          
+          if (typeof value === 'object') {
+            if (value.$$typeof && value.props) {
+              ReactDOM.render(value, root);
+            } else {
+              root.innerHTML = JSON.stringify(value);
+            }
+          } else {
+            root.innerHTML = value;
+          }
+        };
+      `
+    ];
+    for (let c of orderedCells) {
+      if (c.type === 'code') {
+        cummulativeCode.push(c.content);
+      }
+
+      // Only take the code up to the cell we are currently in. If we're at the current cell, we want to stop.
+      // Otherwise we'll pick up code and variables from cells after the current one.
+      if (c.id === cell.id) {
+        break;
+      }
+    }
+    return cummulativeCode;
+  });
 
   useEffect(() => {
     // When the cell is initially loaded there is no bundle so we don't want to wait for the delay to kick off that
     // bundling process.
     if (!bundle) {
-      createBundle(cell.id, cell.content);
+      createBundle(cell.id, cummulativeCode.join('\n'));
     }
 
     const timer = setTimeout(async () => {
-      createBundle(cell.id, cell.content);
+      createBundle(cell.id, cummulativeCode.join('\n'));
     }, 750);
 
     return () => {
       clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cell.content, cell.id, createBundle]);
+  }, [cummulativeCode.join('\n'), cell.id, createBundle]);
 
   return (
     <Resizable direction="vertical">
