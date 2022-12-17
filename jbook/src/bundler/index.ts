@@ -30,7 +30,16 @@ const bundle = async (rawCode: string): Promise<BundleResult> => {
       define: {
         'process.env.NODE_ENV': '"production"',
         global: 'window'
-      }
+      },
+      /**
+       * Instructing esbuild to use this method when it transpiles JSX. Rather than transpiling <h1>Foo</h1>
+       * to React.createElement("h1", ...) it will instead use _React.createElement("h1", ...). We've imported
+       * react and react-dom as _React and _ReactDOM in our bunding process to make it always available for users
+       * and to avoid naming collisions if they also import it themselves in their code. esbuild won't bundle duplicate
+       * versions of these libraries.
+       */
+      jsxFactory: '_React.createElement',
+      jsxFragment: '_React.Fragment'
     });
 
     const bundlerResult: BundleResult = {

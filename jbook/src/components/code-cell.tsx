@@ -6,6 +6,7 @@ import { Cell } from '../state';
 import { useActions } from '../hooks';
 import { useTypedSelector } from '../hooks/use-typed-selector';
 import './code-cell.css';
+import { useCummulativeCode } from '../hooks/use-cummulative-code';
 
 interface CodeCellProps {
   cell: Cell;
@@ -14,56 +15,26 @@ interface CodeCellProps {
 const CodeCell: React.FC<CodeCellProps> = ({ cell }) => {
   const { updateCell, createBundle } = useActions();
   const bundle = useTypedSelector((state) => state.bundles[cell.id]);
-  const cummulativeCode = useTypedSelector((state) => {
-    const { data, order } = state.cells;
-    const orderedCells = order.map((id) => data[id]);
-    const cummulativeCode = [
-      `
-        const show = (value) => {
-          const root = document.querySelector('#root');
-          
-          if (typeof value === 'object') {
-            if (value.$$typeof && value.props) {
-              ReactDOM.render(value, root);
-            } else {
-              root.innerHTML = JSON.stringify(value);
-            }
-          } else {
-            root.innerHTML = value;
-          }
-        };
-      `
-    ];
-    for (let c of orderedCells) {
-      if (c.type === 'code') {
-        cummulativeCode.push(c.content);
-      }
-
-      // Only take the code up to the cell we are currently in. If we're at the current cell, we want to stop.
-      // Otherwise we'll pick up code and variables from cells after the current one.
-      if (c.id === cell.id) {
-        break;
-      }
-    }
-    return cummulativeCode;
-  });
+  const cummulativeCode = useCummulativeCode(cell.id);
 
   useEffect(() => {
     // When the cell is initially loaded there is no bundle so we don't want to wait for the delay to kick off that
     // bundling process.
     if (!bundle) {
-      createBundle(cell.id, cummulativeCode.join('\n'));
+      createBundle(cell.id, cummulativeCode);
     }
 
     const timer = setTimeout(async () => {
-      createBundle(cell.id, cummulativeCode.join('\n'));
+      createBundle(cell.id, cummulativeCode);
     }, 750);
 
     return () => {
       clearTimeout(timer);
     };
+    // Need to disable the linting below because of the reference to bundle. If you add
+    // bundle it will trigger an infinite loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cummulativeCode.join('\n'), cell.id, createBundle]);
+  }, [cummulativeCode, cell.id, createBundle]);
 
   return (
     <Resizable direction="vertical">
